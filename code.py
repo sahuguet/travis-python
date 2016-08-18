@@ -1,3 +1,7 @@
+"""Example Google style docstrings.
+
+This module demonstrates documentation as Blah blah
+"""
 
 
 def main():
