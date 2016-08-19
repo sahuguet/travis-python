@@ -5,4 +5,4 @@ python:
 install: "pip install nose pylint pytest-json"
 # command to run tests
 #script: "pylint *.py && py.test --json=report.json && echo '<MQkrXV>'; cat report.json; echo '<MQkrXV>'"
-script: "py.test --json=report.json && (echo '<MQkrXV>'; cat report.json; echo '<MQkrXV>')"
+script: "py.test --json=report.json; echo '<MQkrXV>'; cat report.json; echo '<MQkrXV>'"
