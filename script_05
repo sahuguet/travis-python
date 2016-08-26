@@ -1,0 +1,1 @@
+tail -n +2 EMAIL_MOCK_DATA.csv | egrep "^[^,]+,[^,]+,[^,]+,Male,[^,]+$" | cut -f 3 -d "," | sort | tr '\n' ','

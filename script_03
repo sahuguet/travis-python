@@ -1,0 +1,1 @@
+tail -n +2 EMAIL_MOCK_DATA.csv  | cut -f 4 -d , | grep Male | wc -l

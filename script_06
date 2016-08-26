@@ -1,0 +1,2 @@
+# Script that does XXXX
+tail -n +2 EMAIL_MOCK_DATA.csv | egrep "^[^,]+,[^,]+,[^,]+,Female,[^,]+$" | cut -f 3 -d "," | sort | tr '\n' ','
