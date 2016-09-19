@@ -73,7 +73,7 @@ print "%d submission(s)." % len(pull_requests)
 TRAVIS_BUILDS = get_travis_builds()
 SUBMISSIONS = []
 
-for r in pull_requests[1:2]:
+for r in pull_requests:
     user = r['user']['login']
     print user
     timestamp = r['updated_at']
