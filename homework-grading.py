@@ -77,12 +77,7 @@ def get_travis_builds():
     return travis_data['builds']
 
 
-def get_travis_jobid(builds, build_id):
-    for build in builds:
-        if build['id'] == build_id:
-            return int(build['job_ids'][0])
-
-def get_travis_jobid2(build_id):
+def get_travis_jobid(build_id):
     url = TRAVIS_BUILD_URL % build_id
     print >> sys.stderr, url
     headers = {'User-Agent': 'MyClient/1.0.0', 'Accept': 'application/vnd.travis-ci.2+json'}
@@ -92,22 +87,12 @@ def get_travis_jobid2(build_id):
     print >> sys.stderr, json.dumps(builds, indent=2, sort_keys=True)
     return builds[0]['job_ids'][0]
 
-"""
-curl -H "User-Agent: MyClient/1.0.0" -H "Accept: application/vnd.travis-ci.2+json" \
-https://api.travis-ci.org/repos/startup-systems/static/builds
-"""
-
-#print get_pytest_report_from_s3(161120715, 'user')
-#sys.exit(-1)
 
 if __name__ == '__main__':
     # We get all the pull-requests from the repo.
     response = requests.get(GIT_PULLS, auth=('sahuguet', GITHUB_TOKEN))
     pull_requests = json.loads(response.text)
     print >> sys.stderr, "%d submission(s)." % len(pull_requests)
-
-    # We get all the Travis builds.
-    TRAVIS_BUILDS = get_travis_builds()
 
     # To store all submissions
     SUBMISSIONS = []
@@ -126,8 +111,7 @@ if __name__ == '__main__':
         print >> sys.stderr, "Build_id %s for user %s." % (build_id, user)
 
         # Get TravisCI jobid from build_id.
-        #job_id = get_travis_jobid(TRAVIS_BUILDS, build_id)
-        job_id = get_travis_jobid2(build_id)
+        job_id = get_travis_jobid(build_id)
         print >> sys.stderr, job_id
 
         SUBMISSIONS.append({'user': user, 'sha': sha, 'timestamp': timestamp,
@@ -135,5 +119,6 @@ if __name__ == '__main__':
                             'travis': travis_data,
                             'travis_job_id': job_id,
                             'pytest_report': get_pytest_report_from_s3(job_id, user)})  # from S3.
+
     # We output everything.
     print json.dumps(SUBMISSIONS, sort_keys=True, indent=2,)
