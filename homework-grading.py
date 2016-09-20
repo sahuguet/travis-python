@@ -92,9 +92,12 @@ if __name__ == '__main__':
     # We get all the pull-requests from the repo.
     response = requests.get(GIT_PULLS, auth=('sahuguet', GITHUB_TOKEN))
     pull_requests = json.loads(response.text)
-
     print >> sys.stderr, "%d submission(s)." % len(pull_requests)
+
+    # We get all the Travis builds.
     TRAVIS_BUILDS = get_travis_builds()
+
+    # To store all submissions
     SUBMISSIONS = []
 
     for r in pull_requests[0:]:
@@ -102,12 +105,15 @@ if __name__ == '__main__':
         print >> sys.stderr, user
         timestamp = r['updated_at']
         sha = r['head']['sha']
+
+        # Get Travis data from Git pull-request.
         travis_data = get_travis_url_from_git(sha)
 
         modified_files = get_modified_files_from_git(sha)
         build_id = int(travis_data.split('/')[-1])
         print >> sys.stderr, "Build_id %s for user %s." % (build_id, user)
 
+        # Get TravisCI jobid from build_id.
         job_id = get_travis_jobid(TRAVIS_BUILDS, build_id)
         print >> sys.stderr, job_id
 
@@ -115,5 +121,6 @@ if __name__ == '__main__':
                             'modified_files': modified_files,
                             'travis': travis_data,
                             'travis_job_id': job_id,
-                            'pytest_report': get_pytest_report_from_s3(job_id, user)})
+                            'pytest_report': get_pytest_report_from_s3(job_id, user)})  # from S3.
+    # We output everything.
     print json.dumps(SUBMISSIONS, sort_keys=True, indent=2,)
