@@ -19,9 +19,6 @@ TRAVIS_LOG_S3 = "https://s3.amazonaws.com/archive.travis-ci.org/jobs/%d/log.txt"
 GIT_USER = 'sahuguet'
 GITHUB_TOKEN = 'd621ee8931b06586b015266ea682a6bbb3730d2f'
 
-
-
-
 def get_travis_url_from_git(sha):
     """Grabs the Travis URL from the git commit data."""
     url = GIT_STATUSES_FROM_SHA % sha
@@ -47,7 +44,7 @@ def get_modified_files_from_git(sha):
 
 def get_pytest_report_from_s3(job_id, user):
     """Retrieves the raw log data from S3, based on job id."""
-    if isinstance(job_id) != int:
+    if isinstance(job_id, int) is False:
         pytest_report = {}
         print >> sys.stderr, "wrong S3 id for user %s." % user
         return pytest_report
