@@ -13,7 +13,6 @@ GIT_PULLS = "https://api.github.com/repos/%s/pulls" % REPO
 GIT_STATUSES_FROM_SHA = "https://api.github.com/repos/" + REPO + "/commits/%s/statuses"
 GIT_COMMIT_FROM_SHA = "https://api.github.com/repos/" + REPO + "/commits/%s"
 TRAVIS_LOG_FROM_ID = "https://api.travis-ci.org/jobs/%d/logs"
-TRAVIS_BUILDS_URL = "https://api.travis-ci.org/repos/%s/builds" % REPO
 TRAVIS_LOG_S3 = "https://s3.amazonaws.com/archive.travis-ci.org/jobs/%d/log.txt"
 TRAVIS_BUILD_URL = "https://api.travis-ci.org/repos/" + REPO + "/builds?ids=%d"
 
@@ -61,20 +60,6 @@ def get_pytest_report_from_s3(job_id, user):
     else:
         pytest_report = {}
     return pytest_report
-
-
-def get_travis_builds():
-    """Retrieves the Travis build for a given repository."""
-    url = TRAVIS_BUILDS_URL
-    print >> sys.stderr, url
-    headers = {'User-Agent': 'MyClient/1.0.0', 'Accept': 'application/vnd.travis-ci.2+json'}
-    response = requests.get(url, headers=headers)
-    data = response.text
-    travis_data = json.loads(data)
-    output_file = open('travis.json', 'w')
-    print >> output_file, json.dumps(travis_data, indent=2, sort_keys=True)
-    output_file.close()
-    return travis_data['builds']
 
 
 def get_travis_jobid(build_id):
