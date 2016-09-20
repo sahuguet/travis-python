@@ -1,14 +1,12 @@
 
 # coding: utf-8
+"""Python script to automatically grade based on pull-requests."""
 
-# This is the script we need to run to grade students' submissions.
 
-# In[6]:
-
-import urllib
 import json
-import urllib2
 import re
+import sys
+import requests
 
 REPO = "startup-systems/static"
 GIT_PULLS = "https://api.github.com/repos/%s/pulls" % REPO
@@ -18,14 +16,19 @@ TRAVIS_LOG_FROM_ID = "https://api.travis-ci.org/jobs/%d/logs"
 TRAVIS_BUILDS_URL = "https://api.travis-ci.org/repos/%s/builds" % REPO
 TRAVIS_LOG_S3 = "https://s3.amazonaws.com/archive.travis-ci.org/jobs/%d/log.txt"
 
-pull_requests = json.loads(urllib.urlopen(GIT_PULLS).read())
+GIT_USER = 'sahuguet'
+GITHUB_TOKEN = 'd621ee8931b06586b015266ea682a6bbb3730d2f'
+
+
 
 
 def get_travis_url_from_git(sha):
     """Grabs the Travis URL from the git commit data."""
     url = GIT_STATUSES_FROM_SHA % sha
-    print "status:", url
-    statuses = json.loads(urllib.urlopen(url).read())
+    print >> sys.stderr, "status:", url
+    response = requests.get(url, auth=('sahuguet', GITHUB_TOKEN))
+    data = response.text
+    statuses = json.loads(data)
     for item in statuses:
         if item['context'] == "continuous-integration/travis-ci/pr":
             return item['target_url']
@@ -35,20 +38,27 @@ def get_travis_url_from_git(sha):
 def get_modified_files_from_git(sha):
     """Grabs the set of modified files from the git commit data."""
     url = GIT_COMMIT_FROM_SHA % sha
-    print url
-    commit = json.loads(urllib.urlopen(url).read())
+    #print >> sys.stderr, url
+    response = requests.get(url, auth=('sahuguet', GITHUB_TOKEN))
+    data = response.text
+    commit = json.loads(data)
     return map(lambda x: x['filename'], commit['files'])
 
 
-def get_pytest_report_from_s3(id):
+def get_pytest_report_from_s3(job_id, user):
     """Retrieves the raw log data from S3, based on job id."""
-    url = TRAVIS_LOG_S3 % int(id)
-    print url
-    log_data = urllib.urlopen(url).read()
-    p = re.compile('<MQkrXV>[^{]+([{].*[}]{3})', re.MULTILINE)
-    m = p.search(log_data)
-    if m:
-        pytest_report = m.group(1)
+    if isinstance(job_id) != int:
+        pytest_report = {}
+        print >> sys.stderr, "wrong S3 id for user %s." % user
+        return pytest_report
+    url = TRAVIS_LOG_S3 % int(job_id)
+    #print >> sys.stderr, url
+    response = requests.get(url)
+    log_data = response.text
+    pattern = re.compile('<MQkrXV>[^{]+([{].*[}]{3})', re.MULTILINE)
+    match = pattern.search(log_data)
+    if match:
+        pytest_report = match.group(1)
     else:
         pytest_report = {}
     return pytest_report
@@ -57,9 +67,14 @@ def get_pytest_report_from_s3(id):
 def get_travis_builds():
     """Retrieves the Travis build for a given repository."""
     url = TRAVIS_BUILDS_URL
+    print >> sys.stderr, url
     headers = {'User-Agent': 'MyClient/1.0.0', 'Accept': 'application/vnd.travis-ci.2+json'}
-    req = urllib2.Request(url, headers=headers)
-    travis_data = json.loads(urllib2.urlopen(req).read())
+    response = requests.get(url, headers=headers)
+    data = response.text
+    travis_data = json.loads(data)
+    output_file = open('travis.json', 'w')
+    print >> output_file, json.dumps(travis_data, indent=2, sort_keys=True)
+    output_file.close()
     return travis_data['builds']
 
 
@@ -68,26 +83,37 @@ def get_travis_jobid(builds, build_id):
         if build['id'] == build_id:
             return int(build['job_ids'][0])
 
+"""
+curl -H "User-Agent: MyClient/1.0.0" -H "Accept: application/vnd.travis-ci.2+json" \
+https://api.travis-ci.org/repos/startup-systems/static/builds
+"""
 
-print "%d submission(s)." % len(pull_requests)
-TRAVIS_BUILDS = get_travis_builds()
-SUBMISSIONS = []
+if __name__ == '__main__':
+    # We get all the pull-requests from the repo.
+    response = requests.get(GIT_PULLS, auth=('sahuguet', GITHUB_TOKEN))
+    pull_requests = json.loads(response.text)
 
-for r in pull_requests:
-    user = r['user']['login']
-    print user
-    timestamp = r['updated_at']
-    sha = r['head']['sha']
-    travis_data = get_travis_url_from_git(sha)
-    print "travis_data", travis_data
-    modified_files = get_modified_files_from_git(sha)
-    build_id = int(travis_data.split('/')[-1])
-    print build_id
-    job_id = get_travis_jobid(TRAVIS_BUILDS, build_id)
-    print job_id
-    SUBMISSIONS.append({'user': user, 'sha': sha, 'timestamp': timestamp,
-                        'modified_files': modified_files,
-                        'travis': travis_data,
-                        'travis_job_id': job_id,
-                        'pytest_report': get_pytest_report_from_s3(job_id)})
-print json.dumps(SUBMISSIONS, sort_keys=True, indent=2,)
+    print >> sys.stderr, "%d submission(s)." % len(pull_requests)
+    TRAVIS_BUILDS = get_travis_builds()
+    SUBMISSIONS = []
+
+    for r in pull_requests[0:]:
+        user = r['user']['login']
+        print >> sys.stderr, user
+        timestamp = r['updated_at']
+        sha = r['head']['sha']
+        travis_data = get_travis_url_from_git(sha)
+
+        modified_files = get_modified_files_from_git(sha)
+        build_id = int(travis_data.split('/')[-1])
+        print >> sys.stderr, "Build_id %s for user %s." % (build_id, user)
+
+        job_id = get_travis_jobid(TRAVIS_BUILDS, build_id)
+        print >> sys.stderr, job_id
+
+        SUBMISSIONS.append({'user': user, 'sha': sha, 'timestamp': timestamp,
+                            'modified_files': modified_files,
+                            'travis': travis_data,
+                            'travis_job_id': job_id,
+                            'pytest_report': get_pytest_report_from_s3(job_id, user)})
+    print json.dumps(SUBMISSIONS, sort_keys=True, indent=2,)
