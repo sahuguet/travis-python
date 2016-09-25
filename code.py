@@ -1,6 +1,6 @@
 """Example Google style docstrings.
 
-This module demonstrates documentation as
+This module demonstrates documentation as a work of art.
 """
 
 
