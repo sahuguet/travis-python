@@ -1,6 +1,8 @@
 """Example Google style docstrings.
 
-This module demonstrates documentation as
+This module demonstrates documentation as ...
+
+Edited on Aug 22 by tomrist
 """
 
 
